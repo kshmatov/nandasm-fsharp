@@ -33,7 +33,6 @@ type codeLine = {
     instruction: Instruction
 }
 
-
 let getAddressFromSymbol (aTable: parserState) (label:string): (string*parserState) = 
     let a, state = label |> aTable.GetAddress
     a |> UnsignedToString, state
