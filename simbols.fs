@@ -2,7 +2,7 @@ module symbol
 
 open types
 
-let private symbols = Map [
+let SystemSymbols = Map [
     ("R0", 0us)
     ("R1", 1us)
     ("R2", 2us)
@@ -28,6 +28,8 @@ let private symbols = Map [
     ("KBD", 0x6000us)
 ]
 
+let FirstFree = 16us
+
 let GetAddress (m: Symbols)(s: string): uint16 option =
     try
         s |> uint16 |> Some
@@ -37,10 +39,12 @@ let GetAddress (m: Symbols)(s: string): uint16 option =
         | option.Some x -> Some x
         | _ -> None
 
-let StoreLabelAddress (m: Symbols) (s: string) (a: uint16): Symbols = 
+let StoreVariableAddress (m: Symbols) (s: string) (a: uint16): Symbols*uint16 = 
     match m.TryFind s with
-    | option.Some _ -> m
-    | option.None -> m.Add (s, a)
+    | option.Some _ -> m, a
+    | option.None -> m.Add (s, a),a+1us
 
-let GetBaseTable(): Symbols =
-    symbols
+let StoreLabel (m: Symbols) (s: string) (a: uint16):Symbols =
+    match m.TryFind s with
+    | option.Some _ -> failwithf $"label ({s}) is declared"
+    | option.None -> m.Add (s, a)

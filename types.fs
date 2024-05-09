@@ -37,9 +37,14 @@ type Op =
     | Halt =        0b0011110us
 
 type Dest = 
+    | None = 0b000us
     | A = 0b100us
-    | M = 0b000us
+    | M = 0b001us
     | D = 0b010us
+    | AM = 0b101us
+    | AD = 0b110us
+    | MD = 0b011us
+    | AMD = 0b111us
 
 type Jump =
     | Jgt = 0b001us
@@ -53,7 +58,7 @@ type Jump =
 
 type CInstruction = {
     Comp: Op
-    Dest: Dest Set
+    Dest: Dest
     Jump: Jump
 }
 
@@ -62,4 +67,3 @@ type Instruction =
     | ALabel of string
     | AAddress of uint16
     | Label of string
-    | Unknown of string

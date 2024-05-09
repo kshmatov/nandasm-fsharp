@@ -1,71 +1,89 @@
 module translator
 
+open System
+
+open utils
+
 open types
 open parser
 open symbol
 
-type translatorState = {
-    aTable: Symbols
-    curLine: uint16
+type parserState = 
+    {
+        jumpAddresses: Symbols
+        memAddress: Symbols
+        curLine: uint16
+        free: uint16
+    }
+    member this.AddJumpLabel (l: string): parserState =
+        match this.jumpAddresses.TryFind l with
+        | Some _ -> failwith $"label ({l}) is declared already"
+        | _ -> {this with jumpAddresses= this.jumpAddresses.Add(l, this.curLine)}
+
+    member this.GetAddress (l: string): uint16*parserState =
+        match this.jumpAddresses.TryFind l with
+        | Some x -> x, this
+        | None ->
+            match this.memAddress.TryFind l with
+            | Some x -> x, this
+            | _ -> this.free, {this with memAddress=this.memAddress.Add(l, this.free);free=this.free+1us}
+
+type codeLine = {
+    num: int
+    instruction: Instruction
 }
 
-let parse (lines: string list) =
-    lines
-    |> List.mapi (fun x l -> (x, l))
-    |> List.choose (fun line ->
-        let i, code = line
-        try
-            code.Trim() |> Parse
-        with
-        | err -> 
-            printfn "line %d '%s' error: %s" i code  err.Message
-            exit 0
-        )
 
-let getAddressFromSymbol (aTable: Symbols) (label:string): string = 
-    match GetAddress aTable label with
-    | Some a -> sprintf "0%015B" a
-    | _ -> 
-        printfn "Cant find label %s in address table" label
-        exit 0
+let getAddressFromSymbol (aTable: parserState) (label:string): (string*parserState) = 
+    let a, state = label |> aTable.GetAddress
+    a |> UnsignedToString, state
+
 let getAddress (a:uint16) = 
-    a |> sprintf "0%015B"
+    a |> utils.UnsignedToString
 
-let buildOp (i:CInstruction):uint16 =
-    let dest = (0, i.Dest) ||> Set.fold (fun x v -> x ||| (v |> int)) |> uint16
-    (i.Comp |> uint16 <<< 6) ||| (dest <<< 3) ||| (i.Jump |> uint16)
+let buildOp (i:CInstruction):string =
+    (0b111us <<< 13) ||| (i.Comp |> uint16 <<< 6) ||| (i.Dest |> uint16 <<< 3) ||| (i.Jump |> uint16)
+    |> UnsignedToString
 
-let buildInsruction (line:Instruction) (state: Symbols) =
-    match line with
-        | ALabel label -> (state, label) ||> getAddressFromSymbol |> Some
-        | AAddress address -> address |> getAddress |> Some
-        | CInstruction i -> i |> buildOp |> sprintf "111%013B" |> Some
-        | x -> 
-            x |> printfn "unexpected instruction %O" 
-            exit 0
+let buildInsruction (line:codeLine) (state: parserState): (string option*parserState) =
+    match line.instruction with
+        | AAddress address -> address |> getAddress |> Some, state
+        | CInstruction i -> i |> buildOp |> Some, state
+        | ALabel (label: string) -> 
+            let a, newState = (state, label) ||> getAddressFromSymbol
+            a |> Some, newState
+        | x -> $"unexpected instruction on line {line.num}: {x}" |> UnhandledError
 
-let translate (aTable: Symbols) (lines: string list): string list = 
-    let state = {aTable=aTable;curLine=0b110us}
-    let preparedCode: Instruction list = lines |> parse
-    // Lets get address table and code without labels
-    let parsed, fullState = 
-        (state, preparedCode) ||> List.mapFold (fun  state line ->
-            match line with
-            | Label name -> 
-                // Label removed and its line nuber will be the address of Jumps
-                None, {aTable=(StoreLabelAddress state.aTable name state.curLine); curLine=state.curLine}
-                // All is ok, go on
-            | _ -> line |> Some, {state with curLine=state.curLine+1us}
-        )
-    
-    parsed |> List.choose (fun x ->
-        match x with
-        | None -> None
-        | Some line -> (line, fullState.aTable) ||> buildInsruction
+let translate (state: parserState) (lines: string list): string list = 
+    let numberedLines =  lines |> List.indexed
+
+    let code, completeState = 
+        (state, numberedLines) 
+        ||> List.mapFold (fun state line ->
+            let i, code = line
+            try
+                match code.Trim() |> Parse with
+                | None -> None, state
+                | Some op -> 
+                    match op with
+                    | Label l ->
+                        None, state.AddJumpLabel l
+                    | _ -> {num=i; instruction=op} |> Some, {state with curLine=state.curLine+1us}
+            with
+            | err -> UnhandledError $"line {i} '{code}' error: {err.Message}"
+            )
             
-    )
+    let bin, _ = 
+        (completeState, code) 
+        ||> List.mapFold (fun state line ->
+            match line with
+            | None -> None, state
+            | Some op -> (op, state) ||> buildInsruction
+        )
+
+    bin |> List.choose (fun x -> x)
 
 
 let Translate (lines: string list): string list =
-    let aTable = GetBaseTable()
-    lines |> translate aTable
+    let state = {jumpAddresses=Symbols[];curLine=0us; memAddress=SystemSymbols; free=FirstFree}
+    (state, lines) ||> translate
