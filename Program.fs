@@ -1,6 +1,7 @@
 ﻿open System
 
-let testData = "   @10
+let testData =
+    "   @10
    D=A
    @INFINITE_LOOP
    D;JLE 
@@ -28,62 +29,57 @@ let testData = "   @10
    @INFINITE_LOOP
    0;JMP"
 
-let testResult = [
-    "0000000000001010";
-    "1110110000010000";
-    "0000000000010111";
-    "1110001100000110";
-    "0000000000010000";
-    "1110001100001000";
-    "0100000000000000";
-    "1110110000010000";
-    "0000000000010001";
-    "1110001100001000";
-    "0000000000010001";
-    "1111110000100000";
-    "1110111010001000";
-    "0000000000010001";
-    "1111110000010000";
-    "0000000000100000";
-    "1110000010010000";
-    "0000000000010001";
-    "1110001100001000";
-    "0000000000010000";
-    "1111110010011000";
-    "0000000000001010";
-    "1110001100000001";
-    "0000000000010111";
-    "1110101010000111";
-]
+let testResult =
+    [ "0000000000001010"
+      "1110110000010000"
+      "0000000000010111"
+      "1110001100000110"
+      "0000000000010000"
+      "1110001100001000"
+      "0100000000000000"
+      "1110110000010000"
+      "0000000000010001"
+      "1110001100001000"
+      "0000000000010001"
+      "1111110000100000"
+      "1110111010001000"
+      "0000000000010001"
+      "1111110000010000"
+      "0000000000100000"
+      "1110000010010000"
+      "0000000000010001"
+      "1110001100001000"
+      "0000000000010000"
+      "1111110010011000"
+      "0000000000001010"
+      "1110001100000001"
+      "0000000000010111"
+      "1110101010000111" ]
 
-let handleFile fn = 
+let handleFile fn =
     if fn |> IO.Path.Exists |> not then
         printfn "%s not found" fn
         exit 0
 
     let path = IO.Path.GetDirectoryName fn
     let name = IO.Path.GetFileNameWithoutExtension fn
-    let resultFile = IO.Path.Join [|path;name+".hack"|]
+    let resultFile = IO.Path.Join [| path; name + ".hack" |]
 
-    fn 
-    |> utils.GetFile
-    |> translator.Translate
-    |> utils.StoreFile resultFile
+    fn |> utils.GetFile |> translator.Translate |> utils.StoreFile resultFile
 
-let runTestSample() =
-    let code = 
-        testData.Split("\n")
-        |> List.ofArray
-        |> translator.Translate
+let runTestSample () =
+    let code = testData.Split("\n") |> List.ofArray |> translator.Translate
 
-    let res =  (code, testResult) ||> List.mapi2 (fun i x y ->
+    let res =
+        (code, testResult)
+        ||> List.mapi2 (fun i x y ->
             if x <> y then
                 printfn $"line {i} expected '{y}' got '{x}'"
                 false
             else
                 printf $"line {i} ok"
-                true
-    )
+                true)
+
     if res |> List.contains false then
         printfn "Code has errors."
     else
@@ -97,9 +93,10 @@ let rec handleFiles (fns: string list) =
         handleFiles xs
 
 [<EntryPoint>]
-let main argv = 
+let main argv =
     if argv |> Array.length > 0 then
         argv |> List.ofArray |> handleFiles
     else
-        runTestSample()
+        runTestSample ()
+
     0
