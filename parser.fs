@@ -32,7 +32,7 @@ let parseComp (s: string): Op =
     | "D&M" -> Op.DAndMem
     | "D|A" -> Op.DOrA
     | "D|M" -> Op.DOrMem
-    | _ -> failwithf "unknown operation: %s" s
+    | _ -> failwithf $"unknown operation: {s}"
 
 
 let parseJmp(s: string): Jump = 
@@ -45,7 +45,7 @@ let parseJmp(s: string): Jump =
     | "JLE" -> Jump.Jle
     | "JMP" -> Jump.Jmp
     | "" -> Jump.None
-    | _ -> failwithf "bad jump condition: %s" s
+    | _ -> failwith "bad jump condition: {s}"
 
 let parseDest(s: string): Dest = 
     match s with
@@ -56,22 +56,23 @@ let parseDest(s: string): Dest =
     | "AD" -> Dest.AD
     | "MD" -> Dest.MD
     | "AMD" -> Dest.AMD
-    | _ -> failwithf "unknown destination: %s" s
+    | "" -> Dest.None
+    | _ -> "unknown destination: {s}" |> failwith
 
 let parseCInstruction (s: string): CInstruction =
     let op_jmp = s.Split(";")
     let des_op = op_jmp[0].Split("=")
     let jmp = 
         match op_jmp |> Array.length with
-        | 2 -> parseJmp op_jmp[1]
+        | 2 -> op_jmp[1] |> parseJmp
         | 1 -> Jump.None
-        | _ -> failwithf "wrong syntax: %s" s
+        | _ -> $"wrong syntax: {s}" |> failwith
     
     let dest, exp = 
         match des_op |> Array.length with
         | 2 -> des_op[0] |> parseDest, des_op[1] |> parseComp
         | 1 -> Dest.None, des_op[0] |> parseComp
-        | _ -> failwithf "wrong syntax: %s" s
+        | _ -> $"wrong syntax: {s}" |> failwith
     
     {Comp=exp; Dest=dest; Jump=jmp}
 
@@ -79,7 +80,7 @@ let parseAInstruction (s: string): Instruction =
     try
         s |> uint16 |> AAddress
     with
-    | _ -> ALabel s
+    | _ ->  s |> ALabel
 
 let parse (s: string):Instruction= 
     match s with
@@ -88,9 +89,9 @@ let parse (s: string):Instruction=
     | _ -> parseCInstruction s  |> CInstruction
 
 let Parse (s: string): Instruction option = 
-    if s.StartsWith "//" then
+    if s.StartsWith("//") then
         None
     else
-        let cleared = s.Split "//"
+        let cleared = s.Split("//")
         cleared[0].Trim() |> parse |> Some
 

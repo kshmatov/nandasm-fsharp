@@ -2,9 +2,6 @@ module types
 
 type Symbols = Map<string, uint16>
 
-let op x = 
-    x <<< 6
-
 type Op =
     | Zero =        0b0101010us
     | One =         0b0111111us

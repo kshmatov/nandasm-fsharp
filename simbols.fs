@@ -29,22 +29,3 @@ let SystemSymbols = Map [
 ]
 
 let FirstFree = 16us
-
-let GetAddress (m: Symbols)(s: string): uint16 option =
-    try
-        s |> uint16 |> Some
-    with
-    | _ ->
-        match m.TryFind s with
-        | option.Some x -> Some x
-        | _ -> None
-
-let StoreVariableAddress (m: Symbols) (s: string) (a: uint16): Symbols*uint16 = 
-    match m.TryFind s with
-    | option.Some _ -> m, a
-    | option.None -> m.Add (s, a),a+1us
-
-let StoreLabel (m: Symbols) (s: string) (a: uint16):Symbols =
-    match m.TryFind s with
-    | option.Some _ -> failwithf $"label ({s}) is declared"
-    | option.None -> m.Add (s, a)

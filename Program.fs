@@ -81,7 +81,7 @@ let runTestSample() =
                 printfn $"line {i} expected '{y}' got '{x}'"
                 false
             else
-                printfn $"line {i} ok"
+                printf $"line {i} ok"
                 true
     )
     if res |> List.contains false then
