@@ -47,16 +47,16 @@ let parseJmp(s: string): Jump =
     | "" -> Jump.None
     | _ -> failwithf "bad jump condition: %s" s
 
-let parseDest(s: string): Dest Set = 
-    s.ToCharArray() 
-    |> Array.map (fun x ->
-        match x with
-        | 'A' -> Dest.A
-        | 'D' -> Dest.D
-        | 'M' -> Dest.M
-        | _ -> failwithf "unknown destination: %s" s
-    )
-    |> Set.ofArray
+let parseDest(s: string): Dest = 
+    match s with
+    | "A" -> Dest.A
+    | "D" -> Dest.D
+    | "M" -> Dest.M
+    | "AM" -> Dest.AM
+    | "AD" -> Dest.AD
+    | "MD" -> Dest.MD
+    | "AMD" -> Dest.AMD
+    | _ -> failwithf "unknown destination: %s" s
 
 let parseCInstruction (s: string): CInstruction =
     let op_jmp = s.Split(";")
@@ -70,7 +70,7 @@ let parseCInstruction (s: string): CInstruction =
     let dest, exp = 
         match des_op |> Array.length with
         | 2 -> des_op[0] |> parseDest, des_op[1] |> parseComp
-        | 1 -> Set.empty, des_op[0] |> parseComp
+        | 1 -> Dest.None, des_op[0] |> parseComp
         | _ -> failwithf "wrong syntax: %s" s
     
     {Comp=exp; Dest=dest; Jump=jmp}
@@ -82,9 +82,9 @@ let parseAInstruction (s: string): Instruction =
     | _ -> ALabel s
 
 let parse (s: string):Instruction= 
-    match s[0] with
-    | '(' -> s.Trim([|'(';')'|]) |> Label
-    | '@' -> s.Substring(1) |> parseAInstruction
+    match s with
+    | x when x.StartsWith("(") && x.EndsWith(")") -> s.Trim([|'(';')'|]) |> Label
+    | x when x.StartsWith("@") -> s.Substring(1) |> parseAInstruction
     | _ -> parseCInstruction s  |> CInstruction
 
 let Parse (s: string): Instruction option = 
@@ -92,5 +92,5 @@ let Parse (s: string): Instruction option =
         None
     else
         let cleared = s.Split "//"
-        cleared[0] |> parse |> Some
+        cleared[0].Trim() |> parse |> Some
 
