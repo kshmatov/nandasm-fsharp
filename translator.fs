@@ -6,7 +6,6 @@ open utils
 
 open types
 open parser
-open symbol
 
 type parserState =
     { jumpAddresses: Symbols

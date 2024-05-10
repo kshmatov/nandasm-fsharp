@@ -6,7 +6,6 @@
   <ItemGroup>
     <Compile Include="utils.fs" />
     <Compile Include="types.fs" />
-    <Compile Include="simbols.fs" />
     <Compile Include="parser.fs" />
     <Compile Include="translator.fs" />
     <Compile Include="Program.fs" />
